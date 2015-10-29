@@ -1,6 +1,6 @@
-Enter file contents here<#  
+<#  
 .SYNOPSIS  
-    Delete all System Restore points older than 50 days
+    Delete all System Restore points older than 60 days
 
 .INPUTS
     None. You cannot pipe objects to this function.
@@ -18,7 +18,7 @@ Enter file contents here<#
 #
 
     # Maximum age in days that a restore point can be before deletion.
-    $MaxAge = 50
+    $MaxAge = 60
 
 ########################
 #                      #
