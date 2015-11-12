@@ -17,7 +17,7 @@
 
 .NOTES  
     Author     : Glen Buktenica
-	Change Log : Initial Build  20151029
+    Change Log : Initial Build  20151029
                : Update to read Machine Password Age 20151112
 #> 
 
@@ -25,7 +25,8 @@
 # Script variables
 #
 
-    # Variable
+    # In case machine password cannot be read maximum age of System Restore point. 
+    # Should be Maximum machine account password age - 1
     $MaxAge = 59
 
 ########################
@@ -57,7 +58,7 @@ Function Delete-ComputerRestorePoints
 	    $restorePoints
 	)
 	begin
-    {
+    	{
 		$fullName="SystemRestore.DeleteRestorePoint"
 		#check if the type is already loaded
 		$isLoaded=([AppDomain]::CurrentDomain.GetAssemblies() | foreach {$_.GetTypes()} | where {$_.FullName -eq $fullName}) -ne $null
@@ -69,11 +70,12 @@ Function Delete-ComputerRestorePoints
 "@  -Name DeleteRestorePoint -NameSpace SystemRestore -PassThru
 		}
 	}
-	process{
+	process
+	{
 		foreach ($restorePoint in $restorePoints)
-        {
+        	{
 			If($PSCmdlet.ShouldProcess("$($restorePoint.Description)","Deleting Restorepoint")) 
-            {
+            		{
 		 		[SystemRestore.DeleteRestorePoint]::SRRemoveRestorePoint($restorePoint.SequenceNumber)
 			}
 		}
@@ -91,9 +93,11 @@ $Searcher=[adsiSearcher]"(&(ObjectClass=Computer)(Name=$env:COMPUTERNAME))"
 $Searcher.PropertiesToLoad.AddRange('pwdLastSet')
 $Searcher.FindAll() | %{$PasswordLastSet=[datetime]::FromFileTime($_.Properties['pwdlastset'][0])}
 
-$RemoveDate = (Get-Date).AddDays(-($MaxAge))
-Get-ComputerRestorePoint | Where { $_.ConvertToDateTime($_.CreationTime) -lt  $RemoveDate } | Delete-ComputerRestorePoints 
-Get-ComputerRestorePoint | Where { $_.ConvertToDateTime($_.CreationTime) -lt  $PasswordLastSet } | Delete-ComputerRestorePoints 
+$MaxDate = (Get-Date).AddDays(-($MaxAge))
+$PasswordLastSet = $PasswordLastSet.AddDays(1)
+
+# Remove old System Restore Points
+Get-ComputerRestorePoint | Where {$_.ConvertToDateTime($_.CreationTime) -lt  $MaxDate -or $_.ConvertToDateTime($_.CreationTime) -lt  $PasswordLastSet} | Delete-ComputerRestorePoints  
 
 # If all System Restore points have been deleted create a new one.
 If (!(Get-ComputerRestorePoint))
