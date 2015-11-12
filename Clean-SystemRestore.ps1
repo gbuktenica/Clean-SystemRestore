@@ -1,6 +1,13 @@
 <#  
 .SYNOPSIS  
-    Delete all System Restore points older than 60 days
+    Delete all System Restore points older than the Machine Password
+
+.DESCRIPTION
+    Reads the age of the Domain Machine Password and deletes all System restore points that are older.
+    Prevents a client performing a System Restore with an old Domain Machine Password and preventing access. 
+    Domain Machine Password reset is configured by a domain level group policy at:
+    Computer Configuration\Windows Settings\Security Settings\Local Policies\Security Options
+    Domain member: Maximum machine account password age 
 
 .INPUTS
     None. You cannot pipe objects to this function.
@@ -11,14 +18,15 @@
 .NOTES  
     Author     : Glen Buktenica
 	Change Log : Initial Build  20151029
+               : Update to read Machine Password Age 20151112
 #> 
 
 #
 # Script variables
 #
 
-    # Maximum age in days that a restore point can be before deletion.
-    $MaxAge = 60
+    # Variable
+    $MaxAge = 59
 
 ########################
 #                      #
@@ -38,14 +46,7 @@ Function Delete-ComputerRestorePoints
     Restore point(s) to be deleted (retrieved and optionally filtered from Get-ComputerRestorePoint
     
 .EXAMPLE  
-    Get-ComputerRestorePoint | Delete-ComputerRestorePoints	 
-
-.NOTES  
-    Author     : Dirk_74
-	Change Log : Initial Build  20130608
-
-.LINK
-    https://gallery.technet.microsoft.com/scriptcenter/Script-to-delete-System-4960775a
+    Get-ComputerRestorePoint | Delete-ComputerRestorePoints -WhatIf	 
 #>
 	[CmdletBinding(SupportsShouldProcess=$True)]param(  
 	    [Parameter(
@@ -55,11 +56,13 @@ Function Delete-ComputerRestorePoints
 		)]
 	    $restorePoints
 	)
-	begin{
+	begin
+    {
 		$fullName="SystemRestore.DeleteRestorePoint"
 		#check if the type is already loaded
 		$isLoaded=([AppDomain]::CurrentDomain.GetAssemblies() | foreach {$_.GetTypes()} | where {$_.FullName -eq $fullName}) -ne $null
-		if (!$isLoaded){
+		If (!$isLoaded)
+        {
 			$SRClient= Add-Type   -memberDefinition  @"
 		    	[DllImport ("Srclient.dll")]
 		        public static extern int SRRemoveRestorePoint (int index);
@@ -67,8 +70,10 @@ Function Delete-ComputerRestorePoints
 		}
 	}
 	process{
-		foreach ($restorePoint in $restorePoints){
-			if($PSCmdlet.ShouldProcess("$($restorePoint.Description)","Deleting Restorepoint")) {
+		foreach ($restorePoint in $restorePoints)
+        {
+			If($PSCmdlet.ShouldProcess("$($restorePoint.Description)","Deleting Restorepoint")) 
+            {
 		 		[SystemRestore.DeleteRestorePoint]::SRRemoveRestorePoint($restorePoint.SequenceNumber)
 			}
 		}
@@ -80,5 +85,18 @@ Function Delete-ComputerRestorePoints
 # Main Body starts here #
 #                       #
 #########################
+
+# Determine current Machine Password age
+$Searcher=[adsiSearcher]"(&(ObjectClass=Computer)(Name=$env:COMPUTERNAME))"
+$Searcher.PropertiesToLoad.AddRange('pwdLastSet')
+$Searcher.FindAll() | %{$PasswordLastSet=[datetime]::FromFileTime($_.Properties['pwdlastset'][0])}
+
 $RemoveDate = (Get-Date).AddDays(-($MaxAge))
 Get-ComputerRestorePoint | Where { $_.ConvertToDateTime($_.CreationTime) -lt  $RemoveDate } | Delete-ComputerRestorePoints 
+Get-ComputerRestorePoint | Where { $_.ConvertToDateTime($_.CreationTime) -lt  $PasswordLastSet } | Delete-ComputerRestorePoints 
+
+# If all System Restore points have been deleted create a new one.
+If (!(Get-ComputerRestorePoint))
+{
+    CheckPoint-Computer -Description "Clean-SystemRestore.ps1"
+}
