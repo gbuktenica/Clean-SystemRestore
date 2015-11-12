@@ -19,6 +19,9 @@
     Author     : Glen Buktenica
     Change Log : Initial Build  20151029
                : Update to read Machine Password Age 20151112
+
+.LINK
+	http://blog.buktenica.com/issues-with-domain-membership-after-system-restore/
 #> 
 
 #
