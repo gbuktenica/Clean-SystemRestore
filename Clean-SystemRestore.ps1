@@ -1,3 +1,4 @@
+#region Header
 <#  
 .SYNOPSIS  
     Delete all System Restore points older than the Machine Password
@@ -10,36 +11,35 @@
     Domain member: Maximum machine account password age 
     Must be run UAC: Elevated
 
-.INPUTS
-    None. You cannot pipe objects to this function.
+.PARAMETER [integer] MaxAge
+    The age in days before a system restore point is deleted if domain controllers are not contactable.
+    Default value 60 days.
 
-.OUTPUTS
-    None. 
+.EXAMPLE
+    Clean-SystemRestore.ps1
+    Will delete all system restore points older than machine password or 60 days if offline and creates a new one if none exist.
+
+.EXAMPLE
+    Clean-SystemRestore.ps1 -MaxAge 30
+    Will delete all system restore points older than machine password or 30 days if offline and creates a new one if none exist.
 
 .NOTES  
     Author     : Glen Buktenica
 	Change Log : 20151029 Initial Build  
                : 20151112 Update to read Machine Password Age 
                : 20151116 Try Catch for LDAP in case computer is not connected to WAN
+               : 20160521 Updated formating and changed fixed MaxAge variable to Parameter
+               
     License    : The MIT License (MIT)  
                  http://opensource.org/licenses/MIT  
   
 .LINK 
     http://blog.buktenica.com/issues-with-domain-membership-after-system-restore/ 
 #> 
-
-#
-# Script variables
-#
-
-    # Variable
-    $MaxAge = 60
-
-########################
-#                      #
-# Functions start here #
-#                      #
-########################
+Param(
+     [int]$MaxAge = 60
+     )
+#region Functions
 Function Delete-ComputerRestorePoints
 {
 <#
@@ -87,13 +87,9 @@ Function Delete-ComputerRestorePoints
 		}
 	}
 }
-
-#########################
-#                       #
-# Main Body starts here #
-#                       #
-#########################
-
+#endregion Functions
+#endregion Header
+#region Main
 # Determine current Machine Password age
 Try
 {
@@ -118,3 +114,4 @@ If (!(Get-ComputerRestorePoint))
 {
     CheckPoint-Computer -Description "Netlogon\Clean-SystemRestore.ps1"
 }
+#endregion Main
