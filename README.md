@@ -1,20 +1,9 @@
-.SYNOPSIS  
-    Delete all System Restore points older than the Machine Password
+# Clean System Restore Points
 
-.DESCRIPTION
-    Reads the age of the Domain Machine Password and deletes all System restore points that are older.
-    Prevents a client performing a System Restore with an old Domain Machine Password and preventing access. 
-    Domain Machine Password reset is configured by a domain level group policy at:
-    Computer Configuration\Windows Settings\Security Settings\Local Policies\Security Options
-    Domain member: Maximum machine account password age 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Copyright Glen Buktenica](https://img.shields.io/badge/Copyright-Glen_Buktenica-blue.svg)](http://buktenica.com)
 
-.INPUTS
-    None. You cannot pipe objects to this function.
-
-.OUTPUTS
-    None. 
-
-.NOTES  
-Author     : Glen Buktenica
-Change Log : Initial Build  20151029
-       	   : Update to read Machine Password Age 20151112
+Domain joined Windows computers will reset their machine passwords by default every 30 days.  
+If a system restore is performed that is older than this the computer will no longer be able to access domain services as its password is now wrong.  
+This script prevents that buy reading the age of the Domain Machine Password and deleting all system restore points that are older.  
+This script should be scheduled to run daily on all domain joined machines.
